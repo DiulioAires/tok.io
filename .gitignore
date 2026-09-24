@@ -1,0 +1,59 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build output and local widget packages
+src-tauri/target/
+src-tauri/gen/schemas/
+windows-lockscreen/bin/
+windows-lockscreen/obj/
+windows-lockscreen/artifacts/
+
+# Working notes and AI assistant files
+docs/
+.agents/
+.codex/
+.claude/
+.cursor/
+.aider*
+AGENTS.md
+CLAUDE.md
+teste.md
+utitui.md
+
+# Local credentials and unrelated downloads
+.env*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+*.db
+*.sqlite*
+public/MediaCreationTool.exe
+public/tauri.svg
+public/vite.svg
+src/assets/react.svg
+src-tauri/icons/android/
+src-tauri/icons/ios/

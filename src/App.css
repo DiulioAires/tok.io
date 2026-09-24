@@ -1,0 +1,91 @@
+.widget-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  padding: 1px;
+  color: #f4f5f7;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.widget-frame {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  animation: widget-arrive-top 360ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.widget-frame-bottom { animation-name: widget-arrive-bottom; }
+.widget-frame-left { animation-name: widget-arrive-left; }
+.widget-frame-right { animation-name: widget-arrive-right; }
+.widget-frame-retracting { animation: widget-depart-top 260ms cubic-bezier(.55, 0, .8, .4) both; }
+.widget-frame-bottom.widget-frame-retracting { animation-name: widget-depart-bottom; }
+.widget-frame-left.widget-frame-retracting { animation-name: widget-depart-left; }
+.widget-frame-right.widget-frame-retracting { animation-name: widget-depart-right; }
+
+.widget-shell-collapsed {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: visible;
+}
+
+.edge-tab {
+  width: 58px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.15);
+  color: #e8ebf0;
+  background: rgba(21,24,31,.97);
+  box-shadow: 0 7px 22px rgba(0,0,0,.36);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.edge-tab:hover, .edge-tab:focus-visible {
+  color: #75e6ae;
+  background: #242832;
+  box-shadow: 0 0 20px rgba(101,230,161,.2);
+  outline: none;
+}
+
+.edge-tab-top { align-self: start; border-top: 0; border-radius: 0 0 16px 16px; }
+.edge-tab-bottom { align-self: end; border-bottom: 0; border-radius: 16px 16px 0 0; }
+.edge-tab-left { justify-self: start; width: 38px; height: 58px; border-left: 0; border-radius: 0 16px 16px 0; }
+.edge-tab-right { justify-self: end; width: 38px; height: 58px; border-right: 0; border-radius: 16px 0 0 16px; }
+.edge-tab svg { width: 18px; height: 18px; transition: transform 160ms ease; }
+.edge-tab-left svg { transform: rotate(90deg); }
+.edge-tab-right svg { transform: rotate(-90deg); }
+.edge-tab-top svg { transform: rotate(180deg); }
+.edge-tab-bottom svg { transform: rotate(0deg); }
+
+.pacman-scene { display: flex; align-items: center; gap: 4px; width: 36px; height: 18px; }
+.pacman { position: relative; width: 16px; height: 16px; flex: 0 0 16px; }
+.pacman::before, .pacman::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #83efb8; }
+.pacman::before { clip-path: inset(0 0 50% 0); animation: pacman-upper 620ms ease-in-out infinite; }
+.pacman::after { clip-path: inset(50% 0 0 0); animation: pacman-lower 620ms ease-in-out infinite; }
+.pacman-dots { display: flex; align-items: center; gap: 3px; }
+.pacman-dots i { display: block; width: 3px; height: 3px; border-radius: 50%; background: #dcebe4; animation: pacman-pellet 900ms linear infinite; }
+.pacman-dots i:nth-child(2) { animation-delay: 150ms; }
+.pacman-dots i:nth-child(3) { animation-delay: 300ms; }
+@keyframes pacman-upper { 0%, 100% { transform: rotate(-34deg); } 50% { transform: rotate(0); } }
+@keyframes pacman-lower { 0%, 100% { transform: rotate(34deg); } 50% { transform: rotate(0); } }
+@keyframes pacman-pellet { 0% { opacity: 0; transform: translateX(4px); } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .pacman::before, .pacman::after, .pacman-dots i { animation: none; }
+  .pacman::before, .pacman::after { transform: none; }
+}
+
+.widget-error { width: 100%; height: 100%; display: grid; place-items: center; padding: 24px; color: #b6bbc5; text-align: center; font: 13px/1.5 "Segoe UI", sans-serif; }
+
+@keyframes widget-arrive-top { from { opacity: .55; transform: translateY(-18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes widget-arrive-bottom { from { opacity: .55; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes widget-arrive-left { from { opacity: .55; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes widget-arrive-right { from { opacity: .55; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes widget-depart-top { to { opacity: .15; transform: translateY(-18px); } }
+@keyframes widget-depart-bottom { to { opacity: .15; transform: translateY(18px); } }
+@keyframes widget-depart-left { to { opacity: .15; transform: translateX(-18px); } }
+@keyframes widget-depart-right { to { opacity: .15; transform: translateX(18px); } }
+@media (prefers-reduced-motion: reduce) { .widget-frame, .widget-frame.widget-frame-retracting { animation: none; } }

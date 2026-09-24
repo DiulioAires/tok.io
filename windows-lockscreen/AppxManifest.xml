@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap uap3 com rescap">
+  <Identity Name="AIUsage.LockScreen" Publisher="CN=AIUsageLocal" Version="0.1.4.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>tok.io</DisplayName>
+    <PublisherDisplayName>tok.io</PublisherDisplayName>
+    <Logo>Assets\icon.png</Logo>
+  </Properties>
+  <Resources><Resource Language="pt-BR" /></Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.26200.0" />
+  </Dependencies>
+  <Applications>
+    <Application Id="App" Executable="AiUsageLockScreen.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="tok.io" Description="Limites do ChatGPT, Codex e Claude Code"
+                          BackgroundColor="transparent" Square150x150Logo="Assets\icon.png" Square44x44Logo="Assets\icon.png" />
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="AiUsageLockScreen.exe" DisplayName="tok.io">
+              <com:Class Id="07f8fe4a-6e76-4a69-9c86-894b80444b8e" DisplayName="tok.io" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="tok.io" Id="AIUsageWidget" PublicFolder="Public">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons><Icon Path="Assets\icon.png" /></ProviderIcons>
+                <Activation><CreateInstance ClassId="07f8fe4a-6e76-4a69-9c86-894b80444b8e" /></Activation>
+                <Definitions>
+                  <Definition Id="AiUsage_Limits" DisplayName="tok.io" Description="Limites de 5 horas e semanais do ChatGPT e Claude Code" AllowMultiple="false">
+                    <Capabilities><Capability><Size Name="small" /></Capability></Capabilities>
+                    <ThemeResources>
+                      <Icons><Icon Path="Assets\icon.png" /></Icons>
+                      <Screenshots><Screenshot Path="Assets\preview.png" DisplayAltText="tok.io" /></Screenshots>
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities><rescap:Capability Name="runFullTrust" /></Capabilities>
+</Package>
