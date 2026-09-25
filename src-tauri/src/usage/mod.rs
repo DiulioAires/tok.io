@@ -6,6 +6,16 @@ mod codex_quota;
 mod claude_quota;
 mod lock_screen;
 
+#[cfg(windows)]
+fn hide_child_window(command: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+
+    command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+}
+
+#[cfg(not(windows))]
+fn hide_child_window(_: &mut std::process::Command) {}
+
 pub use model::{SourceStatus, UsageDashboard};
 
 pub fn start_lock_screen_publisher() {

@@ -80,8 +80,10 @@ fn token_fingerprint(token: &str) -> u64 {
 fn claude_user_agent() -> &'static str {
     CLAUDE_USER_AGENT
         .get_or_init(|| {
-            let version = Command::new("claude")
-                .arg("--version")
+            let mut command = Command::new("claude");
+            command.arg("--version");
+            super::hide_child_window(&mut command);
+            let version = command
                 .output()
                 .ok()
                 .filter(|output| output.status.success())

@@ -55,11 +55,14 @@ fn codex_program() -> PathBuf {
 }
 
 fn request_rate_limits() -> Result<Value, String> {
-    let mut child = Command::new(codex_program())
+    let mut command = Command::new(codex_program());
+    command
         .arg("app-server")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    super::hide_child_window(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|_| "Codex CLI não encontrado. Instale ou atualize o Codex para consultar o limite da conta.".to_string())?;
 

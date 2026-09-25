@@ -1,8 +1,8 @@
 [package]
 name = "ai-usage-widget"
-version = "0.1.0"
+version = "0.1.1"
 description = "tok.io"
-authors = ["you"]
+authors = ["Diulio Aires"]
 edition = "2021"
 
 [lib]
