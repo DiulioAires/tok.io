@@ -38,16 +38,14 @@
   place-items: center;
   border: 1px solid rgba(255,255,255,.15);
   color: #e8ebf0;
-  background: rgba(21,24,31,.97);
-  box-shadow: 0 7px 22px rgba(0,0,0,.36);
+  background: #15181f;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  transition: background 140ms ease, color 140ms ease;
 }
 
 .edge-tab:hover, .edge-tab:focus-visible {
   color: #75e6ae;
   background: #242832;
-  box-shadow: 0 0 20px rgba(101,230,161,.2);
   outline: none;
 }
 
@@ -59,7 +57,7 @@
 .task-alert-claude { --task-alert-color: #ff9c68; }
 .edge-tab-alert {
   border-color: var(--task-alert-color);
-  animation: task-alert-pulse 800ms ease-in-out 6;
+  animation: edge-tab-alert-pulse 800ms ease-in-out 6;
 }
 .edge-tab-alert .provider-icon.is-compact {
   width: 22px;
@@ -83,6 +81,10 @@
   0%, 100% { box-shadow: 0 0 0 0 transparent; filter: brightness(1); }
   50% { box-shadow: 0 0 17px 5px var(--task-alert-color); filter: brightness(1.25); }
 }
+@keyframes edge-tab-alert-pulse {
+  0%, 100% { border-color: rgba(255,255,255,.15); color: #e8ebf0; }
+  50% { border-color: var(--task-alert-color); color: var(--task-alert-color); }
+}
 
 .pacman-scene { display: flex; align-items: center; gap: 4px; width: 36px; height: 18px; }
 .pacman { position: relative; width: 16px; height: 16px; flex: 0 0 16px; }
@@ -99,7 +101,8 @@
 @media (prefers-reduced-motion: reduce) {
   .pacman::before, .pacman::after, .pacman-dots i { animation: none; }
   .pacman::before, .pacman::after { transform: none; }
-  .edge-tab-alert, .task-alert-codex .widget-brand-icon, .task-alert-claude .widget-brand-icon { animation: none; box-shadow: 0 0 0 2px var(--task-alert-color); }
+  .edge-tab-alert { animation: none; border-color: var(--task-alert-color); }
+  .task-alert-codex .widget-brand-icon, .task-alert-claude .widget-brand-icon { animation: none; box-shadow: 0 0 0 2px var(--task-alert-color); }
 }
 
 .widget-error { width: 100%; height: 100%; display: grid; place-items: center; padding: 24px; color: #b6bbc5; text-align: center; font: 13px/1.5 "Segoe UI", sans-serif; }
