@@ -36,7 +36,7 @@ export default function WidgetHeader({
   return (
     <header className="widget-header" data-tauri-drag-region>
       <div className="widget-brand" data-tauri-drag-region>
-        <div className="widget-brand-icon" aria-hidden="true"><img src="/tokio-icon.png" alt="" /></div>
+        <div className="widget-brand-icon" aria-hidden="true"><img src="/logo.png" alt="" /></div>
         <div data-tauri-drag-region>
           <h1>tok.io</h1>
           <span>Seu uso de IA</span>

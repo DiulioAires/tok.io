@@ -3,6 +3,20 @@ mod widget_preferences;
 
 use tauri::{Manager, PhysicalPosition, Position};
 
+#[cfg(windows)]
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn GetAsyncKeyState(v_key: i32) -> i16;
+}
+
+#[tauri::command]
+fn is_primary_mouse_button_down() -> Option<bool> {
+    #[cfg(windows)]
+    { Some(unsafe { GetAsyncKeyState(0x01) as u16 & 0x8000 != 0 }) }
+    #[cfg(not(windows))]
+    { None }
+}
+
 #[tauri::command]
 fn exit_app(app: tauri::AppHandle) {
     app.exit(0);
@@ -113,6 +127,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             exit_app,
+            is_primary_mouse_button_down,
             widget_preferences::get_widget_preferences,
             widget_preferences::set_widget_mode,
             widget_preferences::save_widget_position,

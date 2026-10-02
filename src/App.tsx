@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { PhysicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { availableMonitors, cursorPosition, getCurrentWindow, primaryMonitor, type Monitor } from "@tauri-apps/api/window";
 import LargeUsageWidget from "./features/usage/LargeUsageWidget";
 import CompactUsageWidget from "./features/usage/CompactUsageWidget";
+import ProviderIcon from "./features/usage/ProviderIcon";
 import WidgetSettings from "./features/usage/WidgetSettings";
 import { getWidgetPreferences, saveWidgetPosition, setWidgetMode } from "./features/usage/usageApi";
 import { useUsageData } from "./features/usage/usageData";
@@ -14,6 +16,8 @@ import "./features/usage/UsageDashboard.css";
 import "./App.css";
 
 type Edge = "top" | "right" | "bottom" | "left";
+type CompletedProvider = "codex" | "claude";
+type CompletionAlert = { provider: CompletedProvider; id: number };
 const FULL_SIZE: Record<"large" | "compact", { width: number; height: number }> = {
   large: { width: 460, height: 430 },
   compact: { width: 520, height: 190 },
@@ -40,18 +44,19 @@ function monitorForWindow(monitors: Monitor[], position: WidgetPosition, width: 
 }
 
 function App() {
-  const appWindow = getCurrentWindow();
+  const appWindow = useMemo(getCurrentWindow, []);
   const label: "large" | "compact" = appWindow.label === "compact" ? "compact" : "large";
   const fullSize = FULL_SIZE[label];
   const usage = useUsageData();
   const [mode, setMode] = useState<WidgetMode>("large");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [retracting, setRetracting] = useState(false);
   const [edge, setEdge] = useState<Edge>("top");
   const [dragging, setDragging] = useState(false);
-  const pointerInsideRef = useRef(false);
+  const [completionQueue, setCompletionQueue] = useState<CompletionAlert[]>([]);
+  const completionSequence = useRef(0);
+  const outsideSince = useRef<number | null>(null);
   const collapsedRef = useRef(false);
   const transitionRef = useRef(false);
   const draggingRef = useRef(false);
@@ -60,6 +65,7 @@ function App() {
   const collapseTimer = useRef<number | undefined>(undefined);
   const saveTimer = useRef<number | undefined>(undefined);
   const expandedPosition = useRef<WidgetPosition | null>(null);
+  const activeCompletion = completionQueue[0];
 
   const persistPosition = useCallback((position: WidgetPosition) => {
     if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
@@ -136,7 +142,12 @@ function App() {
       setEdge(nearest);
       setRetracting(true);
       await new Promise<void>((resolve) => window.setTimeout(resolve, 260));
-      if (pointerInsideRef.current || menuOpenRef.current || settingsOpenRef.current || draggingRef.current) return;
+      if (menuOpenRef.current || settingsOpenRef.current || draggingRef.current) return;
+      const [cursor, livePosition, liveSize] = await Promise.all([
+        cursorPosition(), appWindow.outerPosition(), appWindow.outerSize(),
+      ]);
+      if (cursor.x >= livePosition.x && cursor.x < livePosition.x + liveSize.width
+        && cursor.y >= livePosition.y && cursor.y < livePosition.y + liveSize.height) return;
       const scale = monitor.scaleFactor;
       const tabWidth = Math.round((nearest === "left" || nearest === "right" ? TAB.height : TAB.width) * scale);
       const tabHeight = Math.round((nearest === "left" || nearest === "right" ? TAB.width : TAB.height) * scale);
@@ -162,6 +173,14 @@ function App() {
     if (draggingRef.current || menuOpenRef.current || settingsOpenRef.current || collapsedRef.current) return;
     collapseTimer.current = window.setTimeout(() => void collapse(), COLLAPSE_DELAY);
   }, [collapse]);
+
+  const finishDragging = useCallback(() => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    void flushPosition();
+    if (!menuOpenRef.current && !settingsOpenRef.current) scheduleCollapse();
+  }, [flushPosition, scheduleCollapse]);
 
   useEffect(() => {
     let unlistenMove: (() => void) | undefined;
@@ -189,44 +208,86 @@ function App() {
       if (disposed) unlisten();
       else unlistenMode = unlisten;
     });
-    const endDrag = () => {
-      if (!draggingRef.current) return;
-      draggingRef.current = false;
-      setDragging(false);
-      void flushPosition();
-      if (menuOpenRef.current || settingsOpenRef.current) return;
-      void Promise.all([cursorPosition(), appWindow.outerPosition(), appWindow.outerSize()]).then(([cursor, position, size]) => {
-        const inside = cursor.x >= position.x && cursor.x < position.x + size.width
-          && cursor.y >= position.y && cursor.y < position.y + size.height;
-        if (!inside) scheduleCollapse();
-      }).catch(() => undefined);
-    };
-    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointerup", finishDragging);
+    window.addEventListener("pointercancel", finishDragging);
     return () => {
       disposed = true;
       void flushPosition();
       unlistenMove?.();
       unlistenMode?.();
-      window.removeEventListener("pointerup", endDrag);
+      window.removeEventListener("pointerup", finishDragging);
+      window.removeEventListener("pointercancel", finishDragging);
       if (collapseTimer.current !== undefined) window.clearTimeout(collapseTimer.current);
       if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
     };
-  }, [appWindow, flushPosition, label, persistPosition, scheduleCollapse]);
+  }, [appWindow, finishDragging, flushPosition, label, persistPosition]);
 
   useEffect(() => {
-    if (collapsed || settingsOpen || menuOpen || dragging) return;
-    collapseTimer.current = window.setTimeout(() => {
-      if (pointerInsideRef.current) return;
-      void Promise.all([cursorPosition(), appWindow.outerPosition(), appWindow.outerSize()]).then(([cursor, position, size]) => {
+    if (collapsed) return;
+    let checking = false;
+    let disposed = false;
+    const checkCursor = async () => {
+      if (checking) return;
+      if (draggingRef.current) {
+        checking = true;
+        try {
+          if (await invoke<boolean | null>("is_primary_mouse_button_down") === false) finishDragging();
+        } catch { /* Pointer-up remains the fallback. */ }
+        finally { checking = false; }
+        outsideSince.current = null;
+        return;
+      }
+      if (transitionRef.current || menuOpenRef.current || settingsOpenRef.current) {
+        outsideSince.current = null;
+        return;
+      }
+      checking = true;
+      try {
+        const [cursor, position, size] = await Promise.all([
+          cursorPosition(), appWindow.outerPosition(), appWindow.outerSize(),
+        ]);
+        if (disposed) return;
         const inside = cursor.x >= position.x && cursor.x < position.x + size.width
           && cursor.y >= position.y && cursor.y < position.y + size.height;
-        if (!inside) void collapse();
-      }).catch(() => void collapse());
-    }, 1600);
-    return () => {
-      if (collapseTimer.current !== undefined) window.clearTimeout(collapseTimer.current);
+        if (inside) outsideSince.current = null;
+        else if (outsideSince.current === null) outsideSince.current = Date.now();
+        else if (Date.now() - outsideSince.current >= COLLAPSE_DELAY) void collapse();
+      } catch {
+        // Pointer events still provide the fallback when a native position query fails.
+      } finally {
+        checking = false;
+      }
     };
-  }, [appWindow, collapse, collapsed, dragging, menuOpen, settingsOpen]);
+    const interval = window.setInterval(() => void checkCursor(), 250);
+    void checkCursor();
+    return () => {
+      disposed = true;
+      outsideSince.current = null;
+      window.clearInterval(interval);
+    };
+  }, [appWindow, collapse, collapsed, finishDragging]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen<CompletedProvider>("assistant-task-completed", (event) => {
+      if (event.payload !== "codex" && event.payload !== "claude") return;
+      setCompletionQueue((current) => [...current, {
+        provider: event.payload,
+        id: ++completionSequence.current,
+      }]);
+    }).then((stop) => {
+      if (disposed) stop();
+      else unlisten = stop;
+    });
+    return () => { disposed = true; unlisten?.(); };
+  }, []);
+
+  useEffect(() => {
+    if (!activeCompletion) return;
+    const timer = window.setTimeout(() => setCompletionQueue((current) => current.slice(1)), 4800);
+    return () => window.clearTimeout(timer);
+  }, [activeCompletion?.id]);
 
   async function handleModeChange(next: WidgetMode) {
     try {
@@ -239,21 +300,19 @@ function App() {
   }
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
     const target = event.target as HTMLElement;
     if (!target.closest("[data-tauri-drag-region]") || target.closest("button, input, textarea, select, a")) return;
     draggingRef.current = true;
     setDragging(true);
     if (collapseTimer.current !== undefined) window.clearTimeout(collapseTimer.current);
-    void appWindow.startDragging().catch(() => {
-      draggingRef.current = false;
-      setDragging(false);
-    });
+    void appWindow.startDragging().catch(finishDragging);
   }
 
-  function setMenuState(open: boolean) {
+  const setMenuState = useCallback((open: boolean) => {
     menuOpenRef.current = open;
-    setMenuOpen(open);
-  }
+    if (!open) scheduleCollapse();
+  }, [scheduleCollapse]);
 
   function openSettings() {
     settingsOpenRef.current = true;
@@ -272,13 +331,15 @@ function App() {
 
   return (
     <main
-      className={`widget-shell ${collapsed ? "widget-shell-collapsed" : ""} ${dragging ? "is-dragging" : ""}`}
-      onPointerEnter={() => { pointerInsideRef.current = true; if (collapsedRef.current) void expand(); else if (collapseTimer.current !== undefined) window.clearTimeout(collapseTimer.current); }}
-      onPointerLeave={() => { pointerInsideRef.current = false; scheduleCollapse(); }}
+      className={`widget-shell ${collapsed ? "widget-shell-collapsed" : ""} ${dragging ? "is-dragging" : ""} ${activeCompletion ? `task-alert-${activeCompletion.provider} task-alert-${activeCompletion.id % 2 ? "odd" : "even"}` : ""}`}
+      onPointerEnter={() => { outsideSince.current = null; if (collapsedRef.current) void expand(); else if (collapseTimer.current !== undefined) window.clearTimeout(collapseTimer.current); }}
+      onPointerLeave={() => { outsideSince.current = Date.now(); scheduleCollapse(); }}
       onPointerDown={handlePointerDown}
     >
       {collapsed ? (
-        <button className={`edge-tab edge-tab-${edge}`} aria-label="Abrir painel de uso" onPointerEnter={() => void expand()} onFocus={() => void expand()}>{renderPacman()}</button>
+        <button key={activeCompletion?.id ?? "idle"} className={`edge-tab edge-tab-${edge} ${activeCompletion ? `edge-tab-alert edge-tab-alert-${activeCompletion.provider}` : ""}`} aria-label={activeCompletion ? `Tarefa concluída no ${activeCompletion.provider === "codex" ? "Codex" : "Claude Code"}. Abrir painel de uso` : "Abrir painel de uso"} onPointerEnter={() => void expand()} onFocus={() => void expand()}>
+          {activeCompletion ? <ProviderIcon provider={activeCompletion.provider === "codex" ? "openai" : "claude"} compact /> : renderPacman()}
+        </button>
       ) : (
         <div className={`widget-frame widget-frame-${edge} ${retracting ? "widget-frame-retracting" : ""}`}>
           {settingsOpen ? (

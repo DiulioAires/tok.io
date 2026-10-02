@@ -55,11 +55,34 @@
 .edge-tab-bottom { align-self: end; border-bottom: 0; border-radius: 16px 16px 0 0; }
 .edge-tab-left { justify-self: start; width: 38px; height: 58px; border-left: 0; border-radius: 0 16px 16px 0; }
 .edge-tab-right { justify-self: end; width: 38px; height: 58px; border-right: 0; border-radius: 16px 0 0 16px; }
-.edge-tab svg { width: 18px; height: 18px; transition: transform 160ms ease; }
-.edge-tab-left svg { transform: rotate(90deg); }
-.edge-tab-right svg { transform: rotate(-90deg); }
-.edge-tab-top svg { transform: rotate(180deg); }
-.edge-tab-bottom svg { transform: rotate(0deg); }
+.task-alert-codex { --task-alert-color: #65e6a1; }
+.task-alert-claude { --task-alert-color: #ff9c68; }
+.edge-tab-alert {
+  border-color: var(--task-alert-color);
+  animation: task-alert-pulse 800ms ease-in-out 6;
+}
+.edge-tab-alert .provider-icon.is-compact {
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
+}
+.edge-tab-alert .provider-icon.is-compact .provider-icon-art svg {
+  width: 22px;
+  height: 22px;
+}
+.task-alert-codex .widget-brand-icon,
+.task-alert-claude .widget-brand-icon {
+  animation: task-alert-pulse 800ms ease-in-out 6;
+}
+.task-alert-odd .widget-brand-icon { animation-name: task-alert-pulse-odd; }
+@keyframes task-alert-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; filter: brightness(1); }
+  50% { box-shadow: 0 0 17px 5px var(--task-alert-color); filter: brightness(1.25); }
+}
+@keyframes task-alert-pulse-odd {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; filter: brightness(1); }
+  50% { box-shadow: 0 0 17px 5px var(--task-alert-color); filter: brightness(1.25); }
+}
 
 .pacman-scene { display: flex; align-items: center; gap: 4px; width: 36px; height: 18px; }
 .pacman { position: relative; width: 16px; height: 16px; flex: 0 0 16px; }
@@ -76,6 +99,7 @@
 @media (prefers-reduced-motion: reduce) {
   .pacman::before, .pacman::after, .pacman-dots i { animation: none; }
   .pacman::before, .pacman::after { transform: none; }
+  .edge-tab-alert, .task-alert-codex .widget-brand-icon, .task-alert-claude .widget-brand-icon { animation: none; box-shadow: 0 0 0 2px var(--task-alert-color); }
 }
 
 .widget-error { width: 100%; height: 100%; display: grid; place-items: center; padding: 24px; color: #b6bbc5; text-align: center; font: 13px/1.5 "Segoe UI", sans-serif; }

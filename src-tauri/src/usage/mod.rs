@@ -5,6 +5,7 @@ mod credentials;
 mod codex_quota;
 mod claude_quota;
 mod lock_screen;
+mod completion;
 
 #[cfg(windows)]
 fn hide_child_window(command: &mut std::process::Command) {
@@ -33,6 +34,7 @@ pub fn start_local_watcher(app: tauri::AppHandle) {
     }
 
     std::thread::spawn(move || {
+        let mut completions = completion::CompletionWatcher::new(&roots);
         let (sender, receiver) = mpsc::channel();
         let Ok(mut watcher) = notify::recommended_watcher(move |event| {
             let _ = sender.send(event);
@@ -44,11 +46,13 @@ pub fn start_local_watcher(app: tauri::AppHandle) {
         }
 
         loop {
-            if receiver.recv().is_err() {
-                break;
-            }
+            let Ok(event) = receiver.recv() else { break };
+            let mut changed = event.map(|event| event.paths).unwrap_or_default();
             std::thread::sleep(Duration::from_millis(500));
-            while receiver.try_recv().is_ok() {}
+            while let Ok(event) = receiver.try_recv() {
+                if let Ok(event) = event { changed.extend(event.paths); }
+            }
+            completions.scan_paths(&app, &changed);
             if storage::initialize(&app).is_ok() {
                 let (start, end) = collectors::default_window();
                 collectors::refresh_local(&app, &model::RefreshRequest { start_time_unix: start, end_time_unix: end });

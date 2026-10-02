@@ -128,7 +128,7 @@ export default function UsageDashboard() {
     <section className="usage-dashboard" aria-live="polite">
       <header className="usage-heading">
         <div className="usage-brand">
-          <div className="usage-brand-icon"><img src="/tokio-icon.png" alt="" /></div>
+          <div className="usage-brand-icon"><img src="/logo.png" alt="" /></div>
           <div>
             <h1>tok.io</h1>
             <span>Seu uso de IA</span>
